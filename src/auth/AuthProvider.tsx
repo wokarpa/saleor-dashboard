@@ -1,5 +1,7 @@
 import React from "react";
+import { useIntl } from "react-intl";
 
+import useNotifier from "@saleor/hooks/useNotifier";
 import {
   isSupported as isCredentialsManagementAPISupported,
   login as loginWithCredentialsManagementAPI,
@@ -25,19 +27,36 @@ interface AuthProviderOperationsProps {
 }
 const AuthProviderOperations: React.FC<AuthProviderOperationsProps> = ({
   children
-}) => (
-  <TypedTokenAuthMutation>
-    {(...tokenAuth) => (
-      <TypedVerifyTokenMutation>
-        {(...tokenVerify) => (
-          <AuthProvider tokenAuth={tokenAuth} tokenVerify={tokenVerify}>
-            {children}
-          </AuthProvider>
-        )}
-      </TypedVerifyTokenMutation>
-    )}
-  </TypedTokenAuthMutation>
-);
+}) => {
+  const intl = useIntl();
+  const notify = useNotifier();
+
+  const handleLogin = () =>
+    notify({
+      text: intl.formatMessage({
+        defaultMessage:
+          "Just to let you know... You're in demo mode. You can play around with the dashboard but can't save changes."
+      })
+    });
+
+  return (
+    <TypedTokenAuthMutation>
+      {(...tokenAuth) => (
+        <TypedVerifyTokenMutation>
+          {(...tokenVerify) => (
+            <AuthProvider
+              tokenAuth={tokenAuth}
+              tokenVerify={tokenVerify}
+              onLogin={handleLogin}
+            >
+              {children}
+            </AuthProvider>
+          )}
+        </TypedVerifyTokenMutation>
+      )}
+    </TypedTokenAuthMutation>
+  );
+};
 
 interface AuthProviderProps {
   children: (props: {
@@ -55,6 +74,7 @@ interface AuthProviderProps {
     MutationFunction<VerifyToken, VerifyTokenVariables>,
     MutationResult<VerifyToken>
   ];
+  onLogin: () => void;
 }
 
 interface AuthProviderState {
@@ -113,11 +133,12 @@ class AuthProvider extends React.Component<
   }
 
   login = async (email: string, password: string) => {
-    const { tokenAuth } = this.props;
+    const { tokenAuth, onLogin } = this.props;
     const [tokenAuthFn] = tokenAuth;
 
     tokenAuthFn({ variables: { email, password } }).then(result => {
       if (result && !result.data.tokenCreate.errors.length) {
+        onLogin();
         saveCredentials(result.data.tokenCreate.user, password);
       }
     });
