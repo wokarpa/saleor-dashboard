@@ -29,6 +29,8 @@ const environmentPlugin = new webpack.EnvironmentPlugin([
 
 const dashboardBuildPath = "build/dashboard/";
 
+const isProduction = process.env.NODE_ENV === "production";
+
 module.exports = (env, argv) => {
   const devMode = argv.mode !== "production";
 
@@ -98,7 +100,7 @@ module.exports = (env, argv) => {
       splitChunks: false
     },
     output,
-    plugins: [checkerPlugin, environmentPlugin, htmlWebpackPlugin],
+    plugins: [isProduction && checkerPlugin, environmentPlugin, htmlWebpackPlugin].filter(Boolean),
     resolve: {
       extensions: [".js", ".jsx", ".ts", ".tsx"],
       plugins: [pathsPlugin]
