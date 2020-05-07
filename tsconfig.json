@@ -15,6 +15,9 @@
       "@saleor/*": ["src/*"],
       "@test/*": ["testUtils/*"]
     },
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
   },
   "exclude": ["node_modules"]
 }
