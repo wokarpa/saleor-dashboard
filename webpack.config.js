@@ -4,6 +4,9 @@ const CheckerPlugin = require("fork-ts-checker-webpack-plugin");
 const webpack = require("webpack");
 const TsconfigPathsPlugin = require("tsconfig-paths-webpack-plugin");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
+const {BundleAnalyzerPlugin} = require('webpack-bundle-analyzer')
+const ProgressBarPlugin = require('progress-bar-webpack-plugin')
+const InlineManifestWebpackPlugin = require('inline-manifest-webpack-plugin')
 
 require("dotenv").config();
 
@@ -22,19 +25,20 @@ const htmlWebpackPlugin = new HtmlWebpackPlugin({
   hash: true,
   template: "./src/index.html"
 });
+const bundleAnalyzerPlugin = new BundleAnalyzerPlugin();
+const inlineManifestWebpackPlugin = new InlineManifestWebpackPlugin('webpackManifest');
 const environmentPlugin = new webpack.EnvironmentPlugin([
   "APP_MOUNT_URI",
   "API_URI"
 ]);
 
 const dashboardBuildPath = "build/dashboard/";
-
-
-// eslint-disable-next-line
-console.log("NANI!: ", process.env.API_URI)
+const rootNodeModulesPath = resolve(__dirname, 'node_modules')
+const toBoolean = bool => bool === 'true' || bool === true
+const localePath = resolve(__dirname, 'locale')
 
 module.exports = (env, argv) => {
-  const prodMode = process.env.NODE_ENV === "production";
+  const prodMode = argv.mode === "production";
   const devMode = argv.mode !== "production";
 
   let fileLoaderPath;
@@ -99,12 +103,63 @@ module.exports = (env, argv) => {
       ]
     },
     optimization: {
-      removeAvailableModules: false,
-      removeEmptyChunks: false,
-      splitChunks: false
+      runtimeChunk: {
+        name: 'webpackManifest',
+      },
+      splitChunks: {
+        cacheGroups: {
+          locale: {
+            chunks: 'initial',
+            enforce: true,
+            name: 'locale',
+            priority: 10,
+            test({resource}) {
+              return (
+                resource &&
+                /\.json$/.test(resource) &&
+                resource.includes(localePath)
+                // new RegExp(localePath, 'i').test(resource)
+              )
+            },
+          },
+          react: {
+            chunks: 'initial',
+            enforce: true,
+            name: 'react',
+            priority: 9,
+            test({resource}) {
+              const targets = ['react', 'react-apollo', 'react-dom', 'react-dropzone', 'react-error-boundary', 'react-helmet', 'react-infinite-scroller', 'react-inlinesvg', 'react-intl', 'react-jss', 'react-moment', 'react-router', 'react-router-dom', 'react-sortable-hoc', 'react-sortable-tree']
+
+              return (
+                resource &&
+                /\.js$/.test(resource) &&
+                resource.indexOf(rootNodeModulesPath) === 0 &&
+                targets.find(t => new RegExp(`${rootNodeModulesPath}/${t}/`, 'i').test(resource))
+              )
+            },
+          },
+          // any required modules inside node_modules are extracted to vendor
+          vendor: {
+            chunks: 'initial',
+            enforce: true,
+            name: 'vendor',
+            priority: 8,
+            test({resource}) {
+              return resource && /\.js$/.test(resource) && resource.indexOf(rootNodeModulesPath) === 0
+            },
+          },
+        },
+      },
     },
     output,
-    plugins: [prodMode && checkerPlugin, environmentPlugin, htmlWebpackPlugin].filter(Boolean),
+    plugins: [
+      devMode && checkerPlugin, 
+      environmentPlugin, 
+      htmlWebpackPlugin, 
+      toBoolean(process.env.BUNDLE_ANALYZER_REPORT) && prodMode && bundleAnalyzerPlugin,
+      // new ProgressBarPlugin(),
+      prodMode && inlineManifestWebpackPlugin,
+    ].filter(Boolean),
     resolve: {
       extensions: [".js", ".jsx", ".ts", ".tsx"],
       plugins: [pathsPlugin]
