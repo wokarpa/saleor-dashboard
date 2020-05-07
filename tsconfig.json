@@ -15,7 +15,6 @@
       "@saleor/*": ["src/*"],
       "@test/*": ["testUtils/*"]
     },
-    "resolveJsonModule": true
   },
   "exclude": ["node_modules"]
 }
