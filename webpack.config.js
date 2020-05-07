@@ -29,9 +29,12 @@ const environmentPlugin = new webpack.EnvironmentPlugin([
 
 const dashboardBuildPath = "build/dashboard/";
 
-const isProduction = process.env.NODE_ENV === "production";
+
+// eslint-disable-next-line
+console.log("NANI!: ", process.env.API_URI)
 
 module.exports = (env, argv) => {
+  const prodMode = process.env.NODE_ENV === "production";
   const devMode = argv.mode !== "production";
 
   let fileLoaderPath;
@@ -68,7 +71,7 @@ module.exports = (env, argv) => {
       hot: true,
       port: 9000
     },
-    devtool: "sourceMap",
+    devtool: prodMode ? false : "sourceMap",
     entry: {
       dashboard: "./src/index.tsx"
     },
@@ -78,6 +81,7 @@ module.exports = (env, argv) => {
           exclude: /node_modules/,
           loader: "babel-loader",
           options: {
+            cacheDirectory: devMode,
             configFile: resolve("./babel.config.js")
           },
           test: /\.(jsx?|tsx?)$/
@@ -100,7 +104,7 @@ module.exports = (env, argv) => {
       splitChunks: false
     },
     output,
-    plugins: [isProduction && checkerPlugin, environmentPlugin, htmlWebpackPlugin].filter(Boolean),
+    plugins: [prodMode && checkerPlugin, environmentPlugin, htmlWebpackPlugin].filter(Boolean),
     resolve: {
       extensions: [".js", ".jsx", ".ts", ".tsx"],
       plugins: [pathsPlugin]
