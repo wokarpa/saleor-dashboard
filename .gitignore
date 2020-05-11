@@ -40,3 +40,5 @@ webpack-bundle.json
 
 # Exported results file
 django-queries-results.html
+
+!.buildpacks
